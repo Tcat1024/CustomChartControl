@@ -1,0 +1,11 @@
+C:\Users\Tcat\Desktop\WorkSpace\Program\CustomChartControlTest\CustomChartControlTest\bin\Debug\CustomChartControlTest.exe
+C:\Users\Tcat\Desktop\WorkSpace\Program\CustomChartControlTest\CustomChartControlTest\bin\Debug\CustomChartControlTest.pdb
+C:\Users\Tcat\Desktop\WorkSpace\Program\CustomChartControlTest\CustomChartControlTest\obj\Debug\CustomChartControlTest.CustomChartControl.resources
+C:\Users\Tcat\Desktop\WorkSpace\Program\CustomChartControlTest\CustomChartControlTest\obj\Debug\CustomChartControlTest.Form1.resources
+C:\Users\Tcat\Desktop\WorkSpace\Program\CustomChartControlTest\CustomChartControlTest\obj\Debug\CustomChartControlTest.Properties.Resources.resources
+C:\Users\Tcat\Desktop\WorkSpace\Program\CustomChartControlTest\CustomChartControlTest\obj\Debug\CustomChartControlTest.csproj.GenerateResource.Cache
+C:\Users\Tcat\Desktop\WorkSpace\Program\CustomChartControlTest\CustomChartControlTest\obj\Debug\CustomChartControlTest.exe
+C:\Users\Tcat\Desktop\WorkSpace\Program\CustomChartControlTest\CustomChartControlTest\obj\Debug\CustomChartControlTest.pdb
+C:\Users\Tcat\Desktop\WorkSpace\Program\CustomChartControlTest\CustomChartControlTest\obj\Debug\CustomChartControlTest.csprojResolveAssemblyReference.cache
+C:\Users\Tcat\Desktop\WorkSpace\Program\CustomChartControl\CustomChartControl\obj\Debug\CustomChartControlTest.exe
+C:\Users\Tcat\Desktop\WorkSpace\Program\CustomChartControl\CustomChartControl\obj\Debug\CustomChartControlTest.pdb
