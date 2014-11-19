@@ -9,7 +9,7 @@ using System.Linq;
 using System.Windows.Forms;
 using DevExpress.XtraEditors;
 
-namespace CustomChartControlTest
+namespace CustomChart
 {
     public partial class CustomChartControl : DevExpress.XtraEditors.XtraUserControl, IDiagram
     {
@@ -69,36 +69,60 @@ namespace CustomChartControlTest
                 return this._AxisY;
             }
         }
-        private List<GraghPiece> _Graphs = new List<GraghPiece>();
-        public List<GraghPiece> Graphs
+        private GraphCollection _Graphs = new GraphCollection();
+        public GraphCollection Graphs
         {
             get
             {
                 return this._Graphs;
-            }
-            set
-            {
-                this._Graphs = value;
             }
         }
         public CustomChartControl()
         {
             InitializeComponent();
             _AxisX = new Axis(this);
-            _AxisX.LabelSizeChanged += _AxisXProperties_LabelSizeChanged;
+            _AxisX.AxisViewChanged += _AxisXProperties_LabelSizeChanged;
             _AxisY = new Axis(this);
-            _AxisY.LabelSizeChanged += _AxisYProperties_LabelSizeChanged;
+            _AxisY.AxisViewChanged += _AxisYProperties_LabelSizeChanged;
+            _Graphs.BoundChanged += _Graphs_BoundChanged;
             this.forePen = DPens.GetPenFromColor(this.ForeColor);
             this.foreBrush = DBrushs.GetBrushFromColor(this.ForeColor);
         }
 
+        void _Graphs_BoundChanged(object sender, EventArgs e)
+        {
+            if (this.AxisX.Auto)
+            {
+                this.AxisX.MinValue = this.Graphs.MinX;
+                this.AxisX.MaxValue = this.Graphs.MaxX;
+            }
+            if (this.AxisY.Auto)
+            {
+                this.AxisY.MinValue = this.Graphs.MinY;
+                this.AxisY.MaxValue = this.Graphs.MaxY;
+            }
+        }
+        private bool isUpdating = false;
+        public void BeginUpdate()
+        {
+            isUpdating = true;
+        }
+        public void EndUpdate(bool immediate = true)
+        {
+            isUpdating = false;
+            if(immediate)
+                this.RaisePaintEvent(new object(), new PaintEventArgs(this.CreateGraphics(), this.ClientRectangle));
+        }
+
         void _AxisYProperties_LabelSizeChanged(object sender, EventArgs e)
         {
-            this.RaisePaintEvent(new object(), new PaintEventArgs(this.CreateGraphics(), this.ClientRectangle));
+            if(!isUpdating)
+                this.RaisePaintEvent(new object(), new PaintEventArgs(this.CreateGraphics(), this.ClientRectangle));
         }
 
         void _AxisXProperties_LabelSizeChanged(object sender, EventArgs e)
         {
+             if(!isUpdating)
             this.RaisePaintEvent(new object(), new PaintEventArgs(this.CreateGraphics(), this.ClientRectangle));
         }
         protected override void OnForeColorChanged(EventArgs e)
@@ -106,6 +130,7 @@ namespace CustomChartControlTest
             base.OnForeColorChanged(e);
             forePen = DPens.GetPenFromColor(this.ForeColor);
             foreBrush = DBrushs.GetBrushFromColor(this.ForeColor);
+             if(!isUpdating)
             this.RaisePaintEvent(new object(), new PaintEventArgs(this.CreateGraphics(), this.ClientRectangle));
         }
         private void CustomChartControl_Paint(object sender, PaintEventArgs e)
@@ -132,16 +157,15 @@ namespace CustomChartControlTest
             axisXLocation.Y = this.Height - this.Margin.Bottom - axisXHeight;
             axisXWidth = this.Width - axisXLocation.X - this.Margin.Right - this.AxisX.AxisLabelWidth / 2;
             axisYHeight = this.axisXLocation.Y - axisYLocation.Y;
-            g.DrawLine(forePen, this.axisXLocation.X, this.axisXLocation.Y, this.axisXLocation.X + this.axisXWidth, this.axisXLocation.Y);
-            g.DrawLine(forePen, this.axisYLocation.X + axisYWidth, this.axisYLocation.Y, this.axisYLocation.X + axisYWidth, this.axisYLocation.Y + this.axisYHeight);
+            g.DrawLine(DPens.GetPenFromColor(AxisX.Color), this.axisXLocation.X, this.axisXLocation.Y, this.axisXLocation.X + this.axisXWidth, this.axisXLocation.Y);
+            g.DrawLine(DPens.GetPenFromColor(AxisY.Color), this.axisYLocation.X + axisYWidth, this.axisYLocation.Y, this.axisYLocation.X + axisYWidth, this.axisYLocation.Y + this.axisYHeight);
         }
 
         private void drawAxisXLabel(Graphics g)
         {
-            double xperlength = this.axisXWidth / ((double)this.AxisX.MaxValue - (double)this.AxisX.MinValue);
-            int lengthbtthick = (int)(xperlength * this.AxisX.AxisLabelPer);
+            this.axisXper= this.axisXWidth / ((double)this.AxisX.MaxValue - (double)this.AxisX.MinValue+this.AxisX.SideMargin*2);
+            int lengthbtthick = (int)(this.axisXper * this.AxisX.AxisLabelPer);
             int labelthick = (int)Math.Ceiling((double)this.AxisX.AxisLabelWidth / lengthbtthick);
-            this.axisXper = (double)lengthbtthick / this.AxisX.AxisLabelPer;
             int i, x;
             switch (this.AxisX.ValueType)
             {
@@ -150,8 +174,8 @@ namespace CustomChartControlTest
                         string target;
                         for (i = 0; i <= this.AxisX.ThickCount; i++)
                         {
-                            x = axisXLocation.X + i * lengthbtthick;
-                            g.DrawLine(forePen, new Point(x, axisXLocation.Y), new Point(x, axisXLocation.Y + this.AxisX.ThickLength));
+                            x = axisXLocation.X + (int)((i * this.AxisX.AxisLabelPer+this.AxisX.SideMargin)*this.axisXper);
+                            g.DrawLine(DPens.GetPenFromColor(AxisX.Color), new Point(x, axisXLocation.Y), new Point(x, axisXLocation.Y + this.AxisX.ThickLength));
                             if (i % labelthick == 0)
                             {
                                 target = ((double)this.AxisX.MinValue + this.AxisX.AxisLabelPer * i).ToString();
@@ -190,10 +214,9 @@ namespace CustomChartControlTest
         }
         private void drawAxisYLabel(Graphics g)
         {
-            double yperlength = this.axisYHeight / ((double)this.AxisY.MaxValue - (double)this.AxisY.MinValue);
-            int lengthbtthick = (int)(yperlength * this.AxisY.AxisLabelPer);
+            this.axisYper = this.axisYHeight / ((double)this.AxisY.MaxValue - (double)this.AxisY.MinValue+this.AxisY.SideMargin*2);
+            int lengthbtthick = (int)(this.axisYper * this.AxisY.AxisLabelPer);
             int labelthick = (int)Math.Ceiling((double)this.AxisY.AxisLabelHeight / lengthbtthick);
-            this.axisYper = (double)lengthbtthick / this.AxisY.AxisLabelPer;
             int i, y;
             switch (this.AxisY.ValueType)
             {
@@ -202,8 +225,8 @@ namespace CustomChartControlTest
                         string target;
                         for (i = 0; i <= this.AxisY.ThickCount; i++)
                         {
-                            y = axisXLocation.Y - i * lengthbtthick;
-                            g.DrawLine(forePen, new Point(axisXLocation.X, y), new Point(axisXLocation.X - this.AxisY.ThickLength, y));
+                            y = axisXLocation.Y - (int)((i * this.AxisY.AxisLabelPer + this.AxisY.SideMargin) * this.axisYper);
+                            g.DrawLine(DPens.GetPenFromColor(AxisY.Color), new Point(axisXLocation.X, y), new Point(axisXLocation.X - this.AxisY.ThickLength, y));
                             if (i % labelthick == 0)
                             {
                                 target = ((double)this.AxisY.MinValue + this.AxisY.AxisLabelPer * i).ToString();
@@ -249,6 +272,7 @@ namespace CustomChartControlTest
         }
         private void CustomChartControl_SizeChanged(object sender, EventArgs e)
         {
+             if(!isUpdating)
             this.RaisePaintEvent(new object(), new PaintEventArgs(this.CreateGraphics(), this.ClientRectangle));
         }
         public Point PointToDiagram(double x, double y)
@@ -263,11 +287,9 @@ namespace CustomChartControlTest
         {
             return new Point();
         }
-
-
         public Point PointToDiagram(SPoint p)
         {
-            return new Point((int)((p.X - (double)this.AxisX.MinValue) * this.axisXper), (int)((p.Y - (double)this.AxisY.MinValue) * this.axisYper));
+            return new Point((int)((p.X - (double)this.AxisX.MinValue + this.AxisX.SideMargin) * this.axisXper) + this.axisXLocation.X, this.axisXLocation.Y - (int)((p.Y - (double)this.AxisY.MinValue + this.AxisY.SideMargin) * this.axisYper));
         }
     }
     public enum DrawModeType
@@ -286,11 +308,31 @@ namespace CustomChartControlTest
     public class Axis
     {
         private Control Parent;
+        private Color _Color;
+        [DefaultValue(typeof(Color),"DarkGray")]
+        public Color Color 
+        {
+            get
+            {
+                return this._Color.IsEmpty?Color.DarkGray:this._Color;
+            }
+            set
+            {
+                this._Color = value;
+                if (this.AxisViewChanged != null)
+                    this.AxisViewChanged(this, new EventArgs());
+            }
+        }
+        [Browsable(false)]
         public int AxisLabelWidth { get; private set; }
+        [Browsable(false)]
         public int AxisLabelHeight { get; private set; }
+        [Browsable(false)]
         public double AxisLabelPer { get; private set; }
+        [Browsable(false)]
         public int ThickCount { get; private set; }
         private int _ThickLength = 10;
+        [DefaultValue(10)]
         public int ThickLength
         {
             get
@@ -299,10 +341,16 @@ namespace CustomChartControlTest
             }
             set
             {
-                this._ThickLength = value;
+                if (this._ThickLength != value)
+                {
+                    this._ThickLength = value;
+                    if (this.AxisViewChanged != null)
+                        this.AxisViewChanged(this, new EventArgs());
+                }
             }
         }
         private int _ThickMargin = 3;
+        [DefaultValue(3)]
         public int ThickMargin
         {
             get
@@ -311,7 +359,12 @@ namespace CustomChartControlTest
             }
             set
             {
-                this._ThickMargin = value;
+                if (this._ThickMargin != value)
+                {
+                    this._ThickMargin = value;
+                    if (this.AxisViewChanged != null)
+                        this.AxisViewChanged(this, new EventArgs());
+                }
             }
         }
         private Font _Font;
@@ -397,20 +450,33 @@ namespace CustomChartControlTest
                     case AxisValueType.DateTime:
                         {
                             DateTime time;
-                            if (DateTime.TryParse(value.ToString(), out time))
+                            if (DateTime.TryParse(value.ToString(), out time) && (DateTime)MinValue != time)
+                            {
                                 _MinValue = time;
+                                refreshAxisLabelSize();
+                            }
                             break;
                         }
                     case AxisValueType.Number:
                         {
                             double result;
-                            if (double.TryParse(value.ToString(), out result))
+                            if (double.TryParse(value.ToString(), out result) && (double)MinValue != result)
+                            {
                                 _MinValue = result;
+                                refreshAxisLabelSize();
+                            }
                             break;
                         }
-                    default: this._MinValue = value; break;
+                    default:
+                        {
+                            if (this.MinValue.ToString() != value.ToString())
+                            {
+                                this._MinValue = value;
+                                refreshAxisLabelSize();
+                            } 
+                            break;
+                        }
                 }
-                refreshAxisLabelSize();
             }
         }
         private object _MaxValue = 10;
@@ -434,23 +500,38 @@ namespace CustomChartControlTest
                     case AxisValueType.DateTime:
                         {
                             DateTime time;
-                            if (DateTime.TryParse(value.ToString(), out time))
+                            if (DateTime.TryParse(value.ToString(), out time) && (DateTime)MaxValue != time)
+                            {
                                 _MaxValue = time;
+                                refreshAxisLabelSize();
+                            }
                             break;
                         }
                     case AxisValueType.Number:
                         {
                             double result;
-                            if (double.TryParse(value.ToString(), out result))
+                            if (double.TryParse(value.ToString(), out result) && (double)MaxValue != result)
+                            {
                                 _MaxValue = result;
+                                refreshAxisLabelSize();
+                            }
                             break;
                         }
-                    default: this._MaxValue = value; break;
+                    default:
+                        {
+                            if (this.MaxValue.ToString() != value.ToString())
+                            {
+                                this._MaxValue = value;
+                                refreshAxisLabelSize();
+                            }
+                            break;
+                        }
                 }
                 refreshAxisLabelSize();
             }
         }
-        private double _SideMargin = 0.5;
+        private double _SideMargin = 0;
+        [DefaultValue(0)]
         public double SideMargin
         {
             get
@@ -467,7 +548,7 @@ namespace CustomChartControlTest
             this.Parent = parent;
             this.Font = new Font(parent.Font, FontStyle.Regular);
         }
-        public event EventHandler LabelSizeChanged;
+        public event EventHandler AxisViewChanged;
         private void refreshAxisLabelSize()
         {
             switch (this.ValueType)
@@ -476,6 +557,22 @@ namespace CustomChartControlTest
                     {
                         var g = Parent.CreateGraphics();
                         var range = ((double)this.MaxValue - (double)this.MinValue);
+                        var minsize = g.MeasureString(this.MinValue.ToString(), this.Font);
+                        var maxsize = g.MeasureString(this.MaxValue.ToString(), this.Font);
+                        if(range<0)
+                            throw new Exception("最大值小于或等于最小值");
+                        if(range==0)
+                        {
+                            this.AxisLabelPer = 0;
+                            this.ThickCount = 1;
+                            this.AxisLabelWidth = (int)Math.Max(minsize.Width, maxsize.Width);
+                            this.AxisLabelHeight = (int)Math.Max(minsize.Height, maxsize.Height);
+                            if(this.SideMargin==0)
+                                this.SideMargin = 1;
+                            break;
+                        }
+                        if (this.AutoSideMargin)
+                            SideMargin = 0;
                         int pc = (int)Math.Floor(Math.Log10(range));
                         int e = (int)(range * Math.Pow(10, -pc));
                         while (e < 8)
@@ -485,8 +582,6 @@ namespace CustomChartControlTest
                         }
                         this.AxisLabelPer = (double)(e / 14 + 1) * Math.Pow(10, pc);
                         this.ThickCount = (int)(range / this.AxisLabelPer);
-                        var minsize = g.MeasureString(this.MinValue.ToString(), this.Font);
-                        var maxsize = g.MeasureString(this.MaxValue.ToString(), this.Font);
                         var perf = (double)this.MinValue + (double)this.AxisLabelPer;
                         var persize = g.MeasureString((perf).ToString(), this.Font);
                         this.AxisLabelWidth = (int)Math.Max(Math.Max(minsize.Width, maxsize.Width), persize.Width);
@@ -515,8 +610,8 @@ namespace CustomChartControlTest
                         break;
                     }
             }
-            if (this.LabelSizeChanged != null)
-                this.LabelSizeChanged(this, new EventArgs());
+            if (this.AxisViewChanged != null)
+                this.AxisViewChanged(this, new EventArgs());
         }
     }
     public abstract class GraghPiece
@@ -528,6 +623,13 @@ namespace CustomChartControlTest
             {
                 return _MinX;
             }
+            private set
+            {
+                if(_MinX!=value)
+                {
+                    this._MinX = value;
+                }
+            }
         }
         private double _MinY = double.MaxValue;
         public double MinY
@@ -535,6 +637,13 @@ namespace CustomChartControlTest
             get
             {
                 return _MinY;
+            }
+            private set
+            {
+                if(_MinY!=value)
+                {
+                    this._MinY = value;
+                }
             }
         }
         private double _MaxX = double.MinValue;
@@ -544,6 +653,13 @@ namespace CustomChartControlTest
             {
                 return _MaxX;
             }
+            private set
+            {
+                if(_MaxX!=value)
+                {
+                    this._MaxX = value;
+                }
+            }
         }
         private double _MaxY = double.MinValue;
         public double MaxY
@@ -551,6 +667,13 @@ namespace CustomChartControlTest
             get
             {
                 return _MaxY;
+            }
+            private set
+            {
+                if(_MaxY!=value)
+                {
+                    this._MaxY = value;
+                }
             }
         }
         private List<SPoint> _Points = new List<SPoint>();
@@ -593,34 +716,28 @@ namespace CustomChartControlTest
         }
         private void appendBound(SPoint p)
         {
-            if (p.X > this._MaxX)
-                this._MaxX = p.X;
-            if (p.X < this._MinX)
-                this._MinX = p.X;
-            if (p.Y > this._MaxY)
-                this._MaxY = p.Y;
-            if (p.Y < this._MinY)
-                this._MinY = p.Y;
+            if (p.X > this.MaxX)
+                this.MaxX = p.X;
+            if (p.X < this.MinX)
+                this.MinX = p.X;
+            if (p.Y > this.MaxY)
+                this.MaxY = p.Y;
+            if (p.Y < this.MinY)
+                this.MinY = p.Y;
         }
         private void resetBound()
         {
-            this._MaxX = double.MinValue;
-            this._MinX = double.MinValue;
-            this._MaxY = double.MaxValue;
-            this._MinY = double.MaxValue;
+            this.MaxX = double.MinValue;
+            this.MaxY = double.MinValue;
+            this.MinX = double.MaxValue;
+            this.MinY = double.MaxValue;
         }
         private void refreshBound()
         {
+            resetBound();
             foreach (var p in _Points)
             {
-                if (p.X > this._MaxX)
-                    this._MaxX = p.X;
-                if (p.X < this._MinX)
-                    this._MinX = p.X;
-                if (p.Y > this._MaxY)
-                    this._MaxY = p.Y;
-                if (p.Y < this._MinY)
-                    this._MinY = p.Y;
+                appendBound(p);
             }
         }
         protected Color _DrawColor;
@@ -640,6 +757,15 @@ namespace CustomChartControlTest
         protected SolidBrush brush;
         protected Pen pen;
         public abstract void Draw(Graphics g, IDiagram drawboard);
+        public GraghPiece(Color drawcolor)
+        {
+            this.DrawColor = drawcolor;
+        }
+        public GraghPiece()
+        {
+            Random maker = new Random();
+            this.DrawColor = Color.FromArgb(maker.Next(100)+155,maker.Next(255),maker.Next(255),maker.Next(255));
+        }
     }
     public interface IDiagram
     {
@@ -655,7 +781,7 @@ namespace CustomChartControlTest
     }
     public class Polygon : GraghPiece
     {
-        public FillType DrawType;
+        public FillType DrawType = FillType.Edging;
         public override void Draw(Graphics g, IDiagram drawboard)
         {
             Point[] ps = new Point[PointsCount];
@@ -664,10 +790,13 @@ namespace CustomChartControlTest
             {
                 ps[i] = drawboard.PointToDiagram(PointAt(i));
             }
-            switch (DrawType)
+            if (ps.Length >1)
             {
-                case FillType.Fill: g.FillPolygon(brush, ps); break;
-                case FillType.Edging: g.DrawPolygon(pen, ps); break;
+                switch (DrawType)
+                {
+                    case FillType.Fill: g.FillPolygon(brush, ps); break;
+                    case FillType.Edging: g.DrawPolygon(pen, ps); break;
+                }
             }
         }
     }
@@ -683,7 +812,7 @@ namespace CustomChartControlTest
             }
             set
             {
-                if(_X!=value)
+                if (_X != value)
                 {
                     this._X = value;
                     if (this.ValueChanged != null)
@@ -707,6 +836,11 @@ namespace CustomChartControlTest
                         this.ValueChanged(this, new EventArgs());
                 }
             }
+        }
+        public SPoint(double x, double y)
+        {
+            this._X = x;
+            this._Y = y;
         }
     }
     public static class DPens
@@ -767,32 +901,90 @@ namespace CustomChartControlTest
             NewItem = nitem;
         }
     }
-    public class EventList<T> : IList<T>, ICollection<T>, IEnumerable<T>
+    public class GraphCollection : IList<GraghPiece>, ICollection<GraghPiece>, IEnumerable<GraghPiece>, IEnumerable
     {
-
-        public event EventHandler<ItemAddedEventArgs<T>> NewItemAdded;
-        public event EventHandler ItemRemoved;
-        public event EventHandler<ItemChangedEventArgs<T>> ItemChanged;
-        private List<T> data = new List<T>();
-        public int IndexOf(T item)
+        private double _MinX = double.MaxValue;
+        public double MinX
+        {
+            get
+            {
+                return _MinX;
+            }
+            private set
+            {
+                if (_MinX != value)
+                {
+                    this._MinX = value;
+                }
+            }
+        }
+        private double _MinY = double.MaxValue;
+        public double MinY
+        {
+            get
+            {
+                return _MinY;
+            }
+            private set
+            {
+                if (_MinY != value)
+                {
+                    this._MinY = value;
+                }
+            }
+        }
+        private double _MaxX = double.MinValue;
+        public double MaxX
+        {
+            get
+            {
+                return _MaxX;
+            }
+            private set
+            {
+                if (_MaxX != value)
+                {
+                    this._MaxX = value;
+                }
+            }
+        }
+        private double _MaxY = double.MinValue;
+        public double MaxY
+        {
+            get
+            {
+                return _MaxY;
+            }
+            private set
+            {
+                if (_MaxY != value)
+                {
+                    this._MaxY = value;
+                }
+            }
+        }
+        public event EventHandler BoundChanged;
+        private List<GraghPiece> data = new List<GraghPiece>();
+        public int IndexOf(GraghPiece item)
         {
             return data.IndexOf(item);
         }
-        public void Insert(int index, T item)
+        public void Insert(int index, GraghPiece item)
         {
             data.Insert(index, item);
-            if (NewItemAdded != null)
-                NewItemAdded(this, new ItemAddedEventArgs<T>(item));
+            this.appendBound(item);
         }
 
         public void RemoveAt(int index)
         {
+            var item = data[index];
             data.RemoveAt(index);
-            if (ItemRemoved != null)
-                ItemRemoved(this, new EventArgs());
+            if (item.MaxX < this._MaxX && item.MaxY < this._MaxY && item.MinX > this.MinX && item.MinY > this.MinY)
+                return;
+            this.refreshBound();
         }
 
-        public T this[int index]
+        public GraghPiece this[int index]
         {
             get
             {
@@ -800,35 +992,26 @@ namespace CustomChartControlTest
             }
             set
             {
-                var pre = data[index];
-                    data[index] = value;
-                    if (ItemChanged != null)
-                        ItemChanged(this, new ItemChangedEventArgs<T>(pre, value));
+                data[index] = value;
             }
         }
-
-        public void Add(T item)
+        public void Add(GraghPiece item)
         {
             data.Add(item);
-
-            if (NewItemAdded != null)
-                NewItemAdded(this, new ItemAddedEventArgs<T>(item));
+            this.appendBound(item);
         }
-
         public void Clear()
         {
             data.Clear();
-
-            if (ItemRemoved != null)
-                ItemRemoved(this, new EventArgs());
+            this.resetBound();
         }
 
-        public bool Contains(T item)
+        public bool Contains(GraghPiece item)
         {
             return data.Contains(item);
         }
 
-        public void CopyTo(T[] array, int arrayIndex)
+        public void CopyTo(GraghPiece[] array, int arrayIndex)
         {
             data.CopyTo(array, arrayIndex);
         }
@@ -837,29 +1020,77 @@ namespace CustomChartControlTest
         {
             get { return data.Count; }
         }
-        public bool Remove(T item)
+        public bool Remove(GraghPiece item)
         {
             var result = data.Remove(item);
-
-            if (ItemRemoved != null)
-                ItemRemoved(this, new EventArgs());
+            if (item.MaxX < this._MaxX && item.MaxY < this._MaxY && item.MinX > this.MinX && item.MinY > this.MinY)
+                return result;
+            this.refreshBound();
             return result;
         }
 
-        public IEnumerator<T> GetEnumerator()
+        public IEnumerator<GraghPiece> GetEnumerator()
         {
             return data.GetEnumerator();
         }
 
         IEnumerator IEnumerable.GetEnumerator()
         {
-            return data.AsEnumerable<T>().GetEnumerator();
+            return data.AsEnumerable<GraghPiece>().GetEnumerator();
         }
 
 
         public bool IsReadOnly
         {
             get { return false ; }
+        }
+        private void appendBound(GraghPiece gp)
+        {
+            bool changed = false;
+            if (this._MinX > gp.MinX)
+            {
+                changed = true;
+                this._MinX = gp.MinX;
+            }
+            if (this._MaxX < gp.MaxX)
+            {
+                changed = true;
+                this._MaxX = gp.MaxX;
+            }
+            if (this._MinY > gp.MinY)
+            {
+                changed = true;
+                this._MinY = gp.MinY;
+            }
+            if (this._MaxY < gp.MaxY)
+            {
+                changed = true;
+                this._MaxY = gp.MaxY;
+            }
+            if (changed&&BoundChanged != null)
+                BoundChanged(this, new EventArgs());
+        }
+        private void resetBound()
+        {
+            this._MaxX = double.MinValue;
+            this._MaxY = double.MinValue;
+            this._MinX = double.MaxValue;
+            this._MinY = double.MaxValue;
+            if (BoundChanged != null)
+                BoundChanged(this, new EventArgs());
+        }
+        private void refreshBound()
+        {
+            this._MaxX = double.MinValue;
+            this._MaxY = double.MinValue;
+            this._MinX = double.MaxValue;
+            this._MinY = double.MaxValue;
+            foreach (var p in data)
+            {
+                appendBound(p);
+            }
+            if (BoundChanged != null)
+                BoundChanged(this, new EventArgs());
         }
     }
 }

@@ -1,4 +1,4 @@
-﻿namespace CustomChartControlTest
+﻿namespace CustomChart
 {
     partial class CustomChartControl
     {

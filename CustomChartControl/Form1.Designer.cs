@@ -1,4 +1,4 @@
-﻿namespace CustomChartControlTest
+﻿namespace CustomChart
 {
     partial class Form1
     {
@@ -28,7 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.customChartControl1 = new CustomChartControlTest.CustomChartControl();
+            this.customChartControl1 = new CustomChart.CustomChartControl();
             this.SuspendLayout();
             // 
             // customChartControl1
@@ -37,21 +37,18 @@
             this.customChartControl1.Appearance.Options.UseBackColor = true;
             this.customChartControl1.AxisMargin = new System.Windows.Forms.Padding(3);
             this.customChartControl1.AxisX.Font = new System.Drawing.Font("Tahoma", 8.830189F);
-            this.customChartControl1.AxisX.MaxValue = 1300D;
+            this.customChartControl1.AxisX.MaxValue = 10D;
             this.customChartControl1.AxisX.MinValue = 0D;
             this.customChartControl1.AxisX.SideMargin = 0.5D;
-            this.customChartControl1.AxisX.ThickLength = 10;
-            this.customChartControl1.AxisX.ThickMargin = 3;
             this.customChartControl1.AxisY.Font = new System.Drawing.Font("Tahoma", 8.830189F);
-            this.customChartControl1.AxisY.MaxValue = 1300D;
+            this.customChartControl1.AxisY.MaxValue = 10D;
             this.customChartControl1.AxisY.MinValue = 0D;
             this.customChartControl1.AxisY.SideMargin = 0.5D;
-            this.customChartControl1.AxisY.ThickLength = 10;
-            this.customChartControl1.AxisY.ThickMargin = 3;
-            this.customChartControl1.DrawMode = CustomChartControlTest.DrawModeType.CustomMode;
-            this.customChartControl1.Location = new System.Drawing.Point(92, 63);
+            this.customChartControl1.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.customChartControl1.DrawMode = CustomChart.DrawModeType.CustomMode;
+            this.customChartControl1.Location = new System.Drawing.Point(0, 0);
             this.customChartControl1.Name = "customChartControl1";
-            this.customChartControl1.Size = new System.Drawing.Size(718, 421);
+            this.customChartControl1.Size = new System.Drawing.Size(903, 541);
             this.customChartControl1.TabIndex = 0;
             // 
             // Form1
